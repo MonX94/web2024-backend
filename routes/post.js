@@ -97,5 +97,38 @@ router.post('/:id/comments', auth, async (req, res) => {
     }
   }
 );
+
+// @route   DELETE api/posts/:post_id/comments/:comment_id
+// @desc    Delete a comment from a post
+// @access  Private (Admin only)
+router.delete('/:post_id/comments/:comment_id', auth, async (req, res) => {
+    try {
+      const post = await Post.findById(req.params.post_id);
+      const comment = post.comments.find(comment => comment.id === req.params.comment_id);
+  
+      if (!comment) {
+        return res.status(404).json({ msg: 'Comment does not exist' });
+      }
+  
+      // Check user role
+      const user = await User.findById(req.user.id).select('-password');
+      if (user.role !== 'admin') {
+        return res.status(401).json({ msg: 'User not authorized' });
+      }
+  
+      // Get remove index
+      const removeIndex = post.comments.map(comment => comment.id).indexOf(req.params.comment_id);
+  
+      post.comments.splice(removeIndex, 1);
+  
+      await post.save();
+  
+      res.json(post.comments);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  }
+);  
   
 module.exports = router;
