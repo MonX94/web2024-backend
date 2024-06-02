@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
-const auth = require('../routes/auth');
+const auth = require('../middleware/auth');
 const Post = require('../models/Post');
 const User = require('../models/User');
-const authMiddleware = require('../middleware/auth');
 
-// @route   GET api/posts
-// @desc    Get all posts
-// @access  Public
+// @route    GET api/posts
+// @desc     Get all posts
+// @access   Public
 router.get('/', async (req, res) => {
   try {
     const posts = await Post.find().sort({ date: -1 });
@@ -19,12 +18,12 @@ router.get('/', async (req, res) => {
   }
 });
 
-// @route   GET api/posts/:id
-// @desc    Get post by ID
-// @access  Public
+// @route    GET api/posts/:id
+// @desc     Get post by ID
+// @access   Public
 router.get('/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('comments.user', 'name');
 
     if (!post) {
       return res.status(404).json({ msg: 'Post not found' });
@@ -40,29 +39,25 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// @route   POST api/posts
-// @desc    Create a post
-// @access  Private (admin only)
+// @route    POST api/posts
+// @desc     Create a post
+// @access   Private
 router.post(
   '/',
-  [authMiddleware, [check('title', 'Title is required').not().isEmpty(), check('content', 'Content is required').not().isEmpty()]],
-  async (req, res) => {    
+  [auth, [check('title', 'Title is required').not().isEmpty(), check('content', 'Content is required').not().isEmpty()]],
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
+    const { title, content } = req.body;
+
     try {
-      const user = await User.findById(req.user.id);
-
-      if (user.role !== 'admin') {
-        return res.status(403).json({ msg: 'User not authorized' });
-      }
-
       const newPost = new Post({
-        title: req.body.title,
-        content: req.body.content,
-        author: req.user.id,
+        title,
+        content,
+        user: req.user.id,
       });
 
       const post = await newPost.save();
@@ -75,4 +70,32 @@ router.post(
   }
 );
 
+// @route    POST api/posts/:id/comments
+// @desc     Add a comment to a post
+// @access   Private
+// @route   POST api/posts/:id/comments
+// @desc    Add a comment to a post
+// @access  Private
+router.post('/:id/comments', auth, async (req, res) => {
+    try {
+      const post = await Post.findById(req.params.id);
+      const user = await User.findById(req.user.id).select('-password');
+  
+      const newComment = {
+        user: req.user.id,
+        content: req.body.content,
+      };
+  
+      post.comments.unshift(newComment);
+  
+      await post.save();
+  
+      res.json(post.comments);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  }
+);
+  
 module.exports = router;
