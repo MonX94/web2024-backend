@@ -88,7 +88,6 @@ router.post('/:id/comments', auth, async (req, res) => {
   
       await post.save();
       
-      console.log(post.comments);
       res.json(post.comments);
     } catch (err) {
       console.error(err.message);
