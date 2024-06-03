@@ -112,4 +112,22 @@ router.get('/user', auth, async (req, res) => {
     }
 });
 
+
+// @route   GET /api/auth/users/:userId
+// @desc    Get user details by ID
+// @access  Public (or restricted, depending on your requirements)
+router.get('/users/:userId', async (req, res) => {
+    try {
+      const user = await User.findById(req.params.userId);
+      if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+      // If you want to return only specific user details, you can pick them here
+      res.json(user);
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  });
+
 module.exports = router;

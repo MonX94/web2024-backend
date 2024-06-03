@@ -23,12 +23,12 @@ router.get('/', async (req, res) => {
 // @access   Public
 router.get('/:id', async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('comments.user', 'name');
+    const post = await Post.findById(req.params.id).populate('comments.user', 'username');
 
     if (!post) {
       return res.status(404).json({ msg: 'Post not found' });
     }
-
+    
     res.json(post);
   } catch (err) {
     console.error(err.message);
@@ -70,17 +70,15 @@ router.post(
   }
 );
 
-// @route    POST api/posts/:id/comments
-// @desc     Add a comment to a post
-// @access   Private
+
 // @route   POST api/posts/:id/comments
 // @desc    Add a comment to a post
 // @access  Private
 router.post('/:id/comments', auth, async (req, res) => {
     try {
-      const post = await Post.findById(req.params.id);
+      const post = await Post.findById(req.params.id).populate('comments.user', 'username');
       const user = await User.findById(req.user.id).select('-password');
-  
+
       const newComment = {
         user: req.user.id,
         content: req.body.content,
@@ -89,7 +87,8 @@ router.post('/:id/comments', auth, async (req, res) => {
       post.comments.unshift(newComment);
   
       await post.save();
-  
+      
+      console.log(post.comments);
       res.json(post.comments);
     } catch (err) {
       console.error(err.message);
@@ -103,7 +102,7 @@ router.post('/:id/comments', auth, async (req, res) => {
 // @access  Private (Admin only)
 router.delete('/:post_id/comments/:comment_id', auth, async (req, res) => {
     try {
-      const post = await Post.findById(req.params.post_id);
+      const post = await Post.findById(req.params.post_id).populate('comments.user', 'username');
       const comment = post.comments.find(comment => comment.id === req.params.comment_id);
   
       if (!comment) {
