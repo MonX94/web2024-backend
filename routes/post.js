@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
+const { likePost, dislikePost } = require('../controllers/postController');
 const auth = require('../middleware/auth');
 const Post = require('../models/Post');
 const User = require('../models/User');
@@ -127,6 +128,16 @@ router.delete('/:post_id/comments/:comment_id', auth, async (req, res) => {
       res.status(500).send('Server Error');
     }
   }
-);  
+);
+
+// @route   POST api/posts/:id/like
+// @desc    Like a post
+// @access  Private
+router.post('/:id/like', auth, likePost);
+
+// @route   POST api/posts/:id/dislike
+// @desc    Dislike a post
+// @access  Private
+router.post('/:id/dislike', auth, dislikePost);
   
 module.exports = router;
