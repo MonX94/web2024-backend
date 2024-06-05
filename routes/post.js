@@ -5,6 +5,9 @@ const auth = require('../middleware/auth');
 const Post = require('../models/Post');
 const User = require('../models/User');
 
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
 // @route    GET api/posts
 // @desc     Get all posts
 // @access   Public
@@ -56,8 +59,7 @@ router.post(
     try {
       const newPost = new Post({
         title,
-        content,
-        user: req.user.id,
+        content
       });
 
       const post = await newPost.save();
@@ -88,7 +90,14 @@ router.post('/:id/comments', auth, async (req, res) => {
   
       await post.save();
       
-      res.json(post.comments);
+      const responseComment = {
+        user: {id: req.user.id, username: user.username},
+        content: req.body.content,
+        _id: post.comments[0]._id,
+        date: post.comments[0].date
+      };
+
+      res.json(responseComment);
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server Error');
