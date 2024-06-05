@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
-const { likePost, dislikePost } = require('../controllers/postController');
 const auth = require('../middleware/auth');
 const Post = require('../models/Post');
 const User = require('../models/User');
@@ -133,11 +132,55 @@ router.delete('/:post_id/comments/:comment_id', auth, async (req, res) => {
 // @route   POST api/posts/:id/like
 // @desc    Like a post
 // @access  Private
-router.post('/:id/like', auth, likePost);
+router.post('/:id/like', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate('comments.user', 'username');
+    if (!post) {
+      return res.status(404).json({ msg: 'Post not found' });
+    }
+    if (post.likedBy.includes(req.user.id)) {
+      post.likes -= 1;
+      post.likedBy.pull(req.user.id);
+    } else {
+      post.likes += 1;
+      post.likedBy.push(req.user.id);
+      if (post.dislikedBy.includes(req.user.id)) {
+        post.dislikes -= 1;
+        post.dislikedBy.pull(req.user.id);
+      }
+    }
+    await post.save();
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // @route   POST api/posts/:id/dislike
 // @desc    Dislike a post
 // @access  Private
-router.post('/:id/dislike', auth, dislikePost);
+router.post('/:id/dislike', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate('comments.user', 'username');
+    if (!post) {
+      return res.status(404).json({ msg: 'Post not found' });
+    }
+    if (post.dislikedBy.includes(req.user.id)) {
+      post.dislikes -= 1;
+      post.dislikedBy.pull(req.user.id);
+    } else {
+      post.dislikes += 1;
+      post.dislikedBy.push(req.user.id);
+      if (post.likedBy.includes(req.user.id)) {
+        post.likes -= 1;
+        post.likedBy.pull(req.user.id);
+      }
+    }
+    await post.save();
+    res.json(post);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
   
 module.exports = router;
